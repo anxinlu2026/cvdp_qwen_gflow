@@ -1,0 +1,10 @@
+#!/usr/bin/python3 -I
+import os, sys
+ALLOWED = ('sim', 'probe', 'show', 'log', 'status', 'history', 'diff')
+if len(sys.argv) < 2 or sys.argv[1] not in ALLOWED:
+    sys.stderr.write("rtl: the commands of this order are " + ", ".join(ALLOWED) + "\n")
+    sys.exit(2)
+if any(a == "--check" or a.startswith("--check=") for a in sys.argv[2:]):
+    sys.stderr.write("rtl: option not available\n")
+    sys.exit(2)
+os.execv("/opt/rtl/rtl.real", ["/opt/rtl/rtl.real"] + sys.argv[1:])

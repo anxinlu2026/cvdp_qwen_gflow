@@ -1,0 +1,6 @@
+#!/usr/bin/python3 -I
+import os, sys
+if any(a not in ("--detail", "--chain") for a in sys.argv[1:]):
+    sys.stderr.write("align_values: the options are --detail and --chain\n")
+    sys.exit(2)
+os.execv("/venv/bin/python3", ["/venv/bin/python3", "-I", "/opt/s3/align_values.py"] + sys.argv[1:])

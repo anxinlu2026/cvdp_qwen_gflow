@@ -1,0 +1,11 @@
+runs/
+backups/
+datasets
+datasets/
+data/pilot/
+data/stages/gflow/agentic_*/
+data/stages/gflow/copilot_*/
+__pycache__/
+*.pyc
+.DS_Store
+.venv/

@@ -1,0 +1,10 @@
+{
+  "note": "Arguments for Qwen Code in the restricted image (validated by tool/tests/qwen_smoke.sh, 2026-10-29). Keeps exactly six tools; the exclusion list must stay complete: excluding tool_search alone makes the deferred tools load eagerly, and --core-tools does not remove agent/skill.",
+  "exclude_tools": ["agent", "skill", "tool_search", "list_agents", "get_goal", "update_goal", "tool_call", "notebook_edit",
+                    "cron_create", "cron_delete", "cron_list", "enter_worktree", "exit_worktree", "loop_wakeup", "monitor",
+                    "read_mcp_resource", "record_artifact", "report_findings", "send_message", "task_stop", "web_fetch", "zoom_image"],
+  "tools_expected": ["edit", "glob", "grep_search", "read_file", "run_shell_command", "write_file"],
+  "env": {"HOME": "/tmp/qwen-home", "OPENAI_API_KEY": "ollama", "QWEN_CODE_SUPPRESS_YOLO_WARNING": "1"},
+  "cwd": "/code/work",
+  "settings": {"$version": 4, "memory": {"enableManagedAutoMemory": false, "enableManagedAutoDream": false, "enableAutoSkill": false}}
+}

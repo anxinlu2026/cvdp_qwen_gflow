@@ -1,0 +1,3 @@
+Defaults env_reset
+Defaults secure_path="/usr/sbin:/usr/bin:/sbin:/bin"
+agent ALL=(root) NOPASSWD: /opt/rtl/rtl.s3, /opt/s3/align_values.s3
