@@ -274,7 +274,7 @@ def _conv(target, value, name):
     if n is None:
         return svvec.X(target.w)
     if n < 0 or n >> target.w:
-        raise StimulusError(f"{name}: the value {n:#x} does not fit {target.w} bits")
+        raise StimulusError(f"{name}: the value has {n.bit_length() if n >= 0 else 'a negative'} bits ({svvec.short_hex(n)}); it does not fit the {target.w} bits of the model")
     return V(target.w, n)
 
 

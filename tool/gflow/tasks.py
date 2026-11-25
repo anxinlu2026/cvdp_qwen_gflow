@@ -6,7 +6,8 @@ usage:
   python3 /code/lib/tasks.py giveup "REASON"        the open task cannot be closed: what was tried and what the prints showed; it is set aside and the next one is given
   python3 /code/lib/tasks.py show                   the tasks given so far and how each ended
   options: --description /code/work/handshake.json  --model /code/work/rtl_model.py
-Which differences an order gets is set with the order (the data path, part 1 of stepfacts; or part 2 and the handshake); the commands are the same in both.
+Which differences an order gets is set with the order (the data path, part 1 of stepfacts; or part 2 and the handshake; or, for a unit without a step record,
+the output ports edge by edge from portfacts: one task per port, the first case in which it differs); the commands are the same in all.
 
 next, when a task is open, measures again:
 - the difference of the task is still there: the task stays open. It prints the task once more, the minutes since it was given, the stepfacts and hsfacts runs recorded since,
@@ -26,11 +27,24 @@ import argparse, json, os, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import basecheck, hsfacts, ledger, stepfacts
+LAST_BASE = None   # the result of basecheck at the last call (printed as its first line, so that a pass is seen too)
 
 
 def _measure(desc, model, part):
     """The differences now, in the order in which they are given: [{"key", "line", "where", "cmd"}], and the handshake lines that are only a count."""
     items, counts = [], []
+    if part == 3:                         # an order whose unit has no step record: every output port, edge by edge, against the timed specification model
+        import portfacts
+        h = portfacts.measure(desc, "all", model)
+        seen = set()
+        for name, n, k in h["different"]:
+            if k not in seen:
+                seen.add(k)
+                items.append({"key": f"port|{k}|{name}|{n}", "line": f"PORTS (portfacts): {k} is not what the specification model gives", "where": f"first in case {name}, at edge {n}",
+                              "cmd": f"python3 /code/lib/portfacts.py {desc} --fix all --case {name} --edges"})
+        for name, e in dict.fromkeys(h.get("spec_errors") or []):
+            counts.append(f"NOT COMPARED because of the specification model: {name}: {e}")
+        return items, counts
     r = stepfacts.measure(desc, "all", model)
     p = r["part1"]
     if part in (None, 1):
@@ -64,7 +78,7 @@ def _measure(desc, model, part):
 
 def _runs(desc):
     try:
-        return sum(1 for l in open(os.path.join(os.path.dirname(os.path.abspath(desc)), "tool_runs.log")) if l.startswith("--- ") and (" stepfacts " in l or " hsfacts " in l))
+        return sum(1 for l in open(os.path.join(os.path.dirname(os.path.abspath(desc)), "tool_runs.log")) if l.startswith("--- ") and (" stepfacts " in l or " hsfacts " in l or " portfacts " in l))
     except OSError:
         return 0
 
@@ -90,6 +104,8 @@ def run(cmd, reason, desc, model, part, state, book):
             L.append(f"task {st['open']['n']}: {st['open']['line']}   -> open")
         return L or ["no task was given yet"]
     b = basecheck.measure(model)
+    global LAST_BASE
+    LAST_BASE = b
     keep = state + ".base.py"            # the model file as it was at the last call at which the comparison had no difference
     if b is not None and b["ok"]:
         open(keep, "w").write(open(model).read())
@@ -189,7 +205,7 @@ def run(cmd, reason, desc, model, part, state, book):
 def main(argv=None):
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("cmd", choices=("next", "giveup", "show")); ap.add_argument("reason", nargs="?")
-    ap.add_argument("--description", default="/code/work/handshake.json"); ap.add_argument("--model", default="/code/work/rtl_model.py"); ap.add_argument("--part", type=int, choices=(1, 2))
+    ap.add_argument("--description", default="/code/work/handshake.json"); ap.add_argument("--model", default="/code/work/rtl_model.py"); ap.add_argument("--part", type=int, choices=(1, 2, 3))
     ap.add_argument("--state", default="/code/work/tasks.json"); ap.add_argument("--book", default=ledger.BOOK)
     a = ap.parse_args(argv)
     if a.part is None:                   # the order's part: a file beside this library, put there with the order
@@ -203,6 +219,8 @@ def main(argv=None):
         print("tasks: stepfacts could not measure: " + str(ex)); return 2
     except (OSError, KeyError, ValueError, SyntaxError, AttributeError, TypeError, NameError) as ex:
         print(f"tasks: the description, the record file or the model could not be used ({type(ex).__name__}: {ex}); run stepfacts itself to see the message"); return 2
+    if LAST_BASE is not None and LAST_BASE["ok"]:
+        L = ["basecheck: RtlModel() with no switch gives what the simulator recorded for the RTL as written (no difference)."] + L
     print("\n".join(L))
     hsfacts.log(a.description, "tasks", [a.cmd], L[:6])
     return 0

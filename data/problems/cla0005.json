@@ -1,0 +1,19 @@
+{
+ "pid": "cvdp_copilot_Carry_Lookahead_Adder_0005",
+ "note": "architecture (task text only): valid stream, latency 4; timed specification provided as schedule and interface; the model is written by Qwen (order TN)",
+ "spec_dir": "spec_cla0005",
+ "timed_model": "order",
+ "lower_units": [],
+ "top": [
+  [
+   "UP",
+   "up",
+   {
+    "scope": "the module pipelined_adder_32bit with the modules it instantiates (their pieces were checked in block_check_1.md)",
+    "report": "port_check.md",
+    "notes": "notes_up.md"
+   }
+  ]
+ ],
+ "t_step": "TN"
+}

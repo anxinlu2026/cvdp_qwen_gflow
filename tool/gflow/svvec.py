@@ -95,6 +95,16 @@ def _mask(w):
     return (1 << w) - 1
 
 
+
+def short_hex(n, keep=8):
+    """A number in hex, with the middle left out when it has more than 2*keep digits (an error text stays short)."""
+    h = f"{n:#x}"
+    body = h[3:] if h.startswith("-") else h[2:]
+    if len(body) <= 2 * keep:
+        return h
+    sign = "-" if n < 0 else ""
+    return f"{sign}0x{body[:keep]}...{body[-keep:]} ({len(body)} hex digits)"
+
 class V:
     """A vector of w bits: v holds the known bits (0 where unknown), k has a 1 for every known bit."""
     __slots__ = ("w", "v", "k")
@@ -108,15 +118,21 @@ class V:
         if k is None:
             k = m
         if v < 0 or v > m:
-            raise WidthError(f"value {v:#x} does not fit {w} bits")
+            raise WidthError(f"value of {v.bit_length() if v >= 0 else 'a negative'} bits ({short_hex(v)}) does not fit {w} bits")
         if k < 0 or k > m:
-            raise WidthError(f"known mask {k:#x} does not fit {w} bits")
+            raise WidthError(f"known mask ({short_hex(k)}) does not fit {w} bits")
         object.__setattr__(self, "w", w)
         object.__setattr__(self, "k", k)
         object.__setattr__(self, "v", v & k)
 
     def __setattr__(self, *a):
         raise AttributeError("a V is not changed; make a new one")
+
+    def __copy__(self):          # a V is never changed: a copy is the same object
+        return self
+
+    def __deepcopy__(self, memo):
+        return self
 
     def is_known(self):
         return self.k == _mask(self.w)

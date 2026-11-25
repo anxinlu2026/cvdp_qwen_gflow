@@ -40,8 +40,13 @@ and returns the record as a list, in the order the specification applies them (t
 The values in `data` are the port values as ints; bringing them into the form the reference model takes
 (bytes, words, their order) is done in this function. When no edge hits the record, look at this first.
 The first entry is the data right after the inputs were taken, the last is the final data. A state
-is an int, a list of ints, or a list of rows of ints (the elements of the data register); the
-arrangement (rows or columns first, most or least significant element first) is found by the tool.
+is an int, a list of ints, or a list of rows of ints (the elements of the data register). How a state
+sits in the data register (rows or columns first, most or least significant element first) is given in the
+description as "arrangement": one of "rows as written", "rows and columns exchanged" (a state that is a list
+of rows), "as written", "reversed" (a list), "most significant element first", "least significant element
+first" (an int). It is the arrangement of the specification, the one the pieces of the design work on; the
+tool uses it and does not look for another. The print also gives, as a fact, how many forced edges hit the
+record in each arrangement. Without "arrangement" the tool takes the one with the most hits and says so.
 The design may do several steps of the record in one edge, or one step at a time: both are found.
 
 usage: python3 /code/lib/stepfacts.py /code/work/handshake.json [options]
@@ -313,9 +318,12 @@ def measure(hs, fix=(), model="/code/work/rtl_model.py", interface=None, only=No
                 w, j = u.outcome(u.force(base, c, fl[k], idle_in), fl, k)
                 n += w == "step"
         score[arr] = n
-    arr = max(score, key=score.get)
+    given = hs.get("arrangement")
+    if given is not None and given not in score:
+        raise DescriptionError(f"\"arrangement\": {given!r} is not a way a state of this record sits in {u.data}; the ways: {sorted(score)}")
+    arr = given if given is not None else max(score, key=score.get)
     u.arr = arr
-    r["arrangement"] = (arr, score)
+    r["arrangement"] = (arr, score, given is not None)
     fl = [c[arr] for c in cand]
     # part 1
     hit, info, near = {}, {}, {}
@@ -488,8 +496,8 @@ def text(r, every=False):
     N, names, hit = p["N"], p["names"], p["hit"]
     L = [f"stepfacts  switches: {', '.join(r['fix']) or 'none'}   control: {', '.join(u.ctl)}   data register: {u.data}   record: {N + 1} steps (0 = the load, {N} = final)"]
     L += ["  note: " + n for n in r["notes"]]
-    arr, score = r["arrangement"]
-    L.append(f"arrangement of the record in the data register: {arr}   (forced edges after which the data register held a later step of the record: " + ", ".join(f"{a}: {n}" for a, n in score.items()) + ")")
+    arr, score, given = r["arrangement"]
+    L.append(f"arrangement of the record in the data register: {arr}" + (" (given in the description)" if given else " (NOT given in the description: the one with the most hits)") + "   (forced edges after which the data register held a later step of the record: " + ", ".join(f"{a}: {n}" for a, n in score.items()) + ")")
     if not max(score.values()):
         L.append("  NO edge hits the record in any arrangement: see that \"reference\" gives the record of this unit, that \"data_registers\" names the register it describes, and that the pieces of the data path were checked alone; when these are right, the data path has a fault in every step: look at --step 0")
     L += ["", "== part 1: the data path alone (control registers forced, one edge, the unit below has finished) =="]

@@ -63,7 +63,6 @@ def b_scopes(pid):
         leaves = [k for k in kids[m] if not kids[k] and k not in seen]
         before = [k for k in kids[m] if kids[k]]
         t = f"the module {m}" + (f" with the modules it instantiates that instantiate nothing ({', '.join(leaves)})" if leaves else "")
-        t += ", piece by piece, and as a unit where it needs several cycles to finish"
         if before:
             t += " (" + ", ".join(f"its submodule {k} was checked in block_check_{[x for x in parents].index(k) + 1}.md" for k in before) + ")"
         out.append((t, f"block_check_{n}.md"))
@@ -111,14 +110,21 @@ def cut_facts(pid, tag, start, n):
 def with_retry(pid, base, log, step, carry, fact, name=None, **kw):
     start = carry
     name = name or step.lower()
+    cut_more = kw.pop("cut_more", None)      # facts of the host about the files a cut order left, for its continuation (a function of the tag; f7-12, user agreed 2026-11-24)
+    more = lambda t: (cut_more(t) if cut_more else "")
     tag = order(pid, base, log, step, carry, name, fact=fact, **kw)
     if not done(pid, tag):
         own = log[-1]["reason"] == "finished"   # the agent ended its turn without DONE: continued once (user decision 2026-11-20); a hang still stops the driver
         if log[-1]["reason"] not in CUT and not own:   # the order hung or failed: the cause is found before anything is run again
             raise Hang(f"order {tag} ended without DONE (reason: {log[-1]['reason']}); find the cause before it is run again")
-        tag = order(pid, base, log, step, tag, name + "r", fact=fact + (OWN_FACT if own else CUT_FACT) + cut_facts(pid, tag, start, 1), **kw)
+        tag = order(pid, base, log, step, tag, name + "r", fact=fact + (OWN_FACT if own else CUT_FACT) + cut_facts(pid, tag, start, 1) + more(tag), **kw)
         if own and not done(pid, tag) and log[-1]["reason"] not in CUT:
             raise Hang(f"order {tag} ended without DONE a second time (reason: {log[-1]['reason']}); find the cause before it is run again")
+        if not own and step not in MORE and not done(pid, tag) and log[-1]["reason"] == "finished":
+            # the continuation of a cut order ended by itself without DONE: continued once more, as a first order that ends by itself (f7-10 b2p1r, 2026-11-24)
+            tag = order(pid, base, log, step, tag, name + "rr", fact=fact + OWN_FACT + cut_facts(pid, tag, start, 2) + more(tag), **kw)
+            if not done(pid, tag) and log[-1]["reason"] not in CUT:
+                raise Hang(f"order {tag} ended without DONE (reason: {log[-1]['reason']}); find the cause before it is run again")
         if step in MORE and not done(pid, tag):     # the whole-operation orders: one more continuation, and no later order on an unfinished one
             if log[-1]["reason"] not in CUT:
                 raise Hang(f"order {tag} ended without DONE (reason: {log[-1]['reason']}); find the cause before it is run again")

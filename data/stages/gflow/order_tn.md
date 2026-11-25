@@ -1,0 +1,18 @@
+You are working in /code.
+
+Files (read-only):
+{FILES}
+{FACT}
+In this order you can read files, write files in /code/work, and run commands with the shell and python3. There is no network. Use only these files. The source of the design is not given in this order.
+
+Task: write the timed specification model of the top module. The interface file in /code/work/spec says which file to write (write it in /code/work), the class and what its step() takes and returns: one call is one rising clock edge. The schedule file in /code/work/spec says what the module does in every clock cycle; it was written from the task and the documents only and is the specification of what the ports do after every edge. The model follows the schedule; it is used in later orders as the requirement for the ports of a design. Where the interface file says that a behaviour is for you to decide, the schedule decides it; you decide only what the schedule leaves open. The schedule may point to open points of a model it was written beside; that model is not given: list the open points yourself. Use only the Python standard library and the reference model.
+
+1. The values come from the reference model in /code/work/model/: import its functions (`sys.path.insert(0, "/code/work/model")`) and do not write the operations again. When the schedule spreads over several edges what the reference model computes in one call, call it once and take the part each edge needs. Where the schedule says which operations an edge applies, the model applies these in that edge.
+2. Every statement of the schedule is in the model, with the statement as a comment next to the code: what each edge does, what the end signal and the result outputs are after each edge, what a reset does, what happens to inputs while an operation runs.
+3. The model gives outputs for every order of inputs and never stops with an error: a start in every mode in any edge, also as the first operation after a reset, a start while an operation runs, edges without a start. Where the schedule says what is stored after a reset, the model stores it and uses it like any stored value. Where a result is not defined, the operation still ends as the schedule says and the outputs have values; this is an open point. The one exception: where the interface file says that a value the specification does not fix is returned as None, the model returns None for that output in those edges, and only there; such a value is not judged later.
+4. Where the schedule and the task leave a behaviour open, do not choose silently: list it under "Open points" at the top of the file (the question, your choice, the sentence it rests on or "not stated").
+5. Check the model with a script /code/work/timed_check.py that prints one line per check, "agree" or "differ": the worked example of the documents through step() in every mode the schedule names (a mode that uses what an earlier operation stored is run after that operation, on the same object); for every statement of the schedule that names an edge, the outputs after that edge are what it says; the outputs after a reset; the outputs in edges without a start; every mode as the first operation after a reset (the end signal falls and rises as the schedule says); two operations one after the other with different data (the second result belongs to the second data); a start while an operation runs (what the schedule says about inputs while busy).
+
+The last line of timed_check.py is the number of checks that do not agree.
+
+When the model is written and that number is 0, create the empty file /code/work/DONE. An order ends after {MINUTES} minutes.

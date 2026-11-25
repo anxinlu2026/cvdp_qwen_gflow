@@ -47,20 +47,51 @@ def load(path):
     return ch
 
 
-def model_switches(model):
-    """The names in every dictionary SWITCHES of the model file, in the order of the file (read from the source, the model is not run)."""
-    names = []
+def switch_entries(model):
+    """The entries of every dictionary SWITCHES of the model file, in the order of the source: [(name, value node or None)].
+    Read from the source (the model is not run). The forms found: `SWITCHES = {...}` (also a set, list or tuple of names),
+    `SWITCHES = dict(...)` / `{**Other.SWITCHES, ...}` (the literal entries), `SWITCHES.update({...})`, `SWITCHES["name"] = ...`,
+    `SWITCHES |= {...}`, with SWITCHES a name or an attribute (`RtlModel.SWITCHES`)."""
     try:
         tree = ast.parse(Path(model).read_text())
     except Exception:
         return None
+
+    def is_sw(t):
+        return (isinstance(t, ast.Name) and t.id == "SWITCHES") or (isinstance(t, ast.Attribute) and t.attr == "SWITCHES")
+
+    def lit(v):
+        if isinstance(v, ast.Dict):
+            return [(k.value, x) for k, x in zip(v.keys, v.values) if isinstance(k, ast.Constant) and isinstance(k.value, str)]
+        if isinstance(v, (ast.Set, ast.List, ast.Tuple)):
+            return [(k.value, None) for k in v.elts if isinstance(k, ast.Constant) and isinstance(k.value, str)]
+        if isinstance(v, ast.Call) and isinstance(v.func, ast.Name) and v.func.id == "dict":
+            return [x for a in v.args for x in lit(a)] + [(k.arg, k.value) for k in v.keywords if k.arg]
+        return []
+    found = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "SWITCHES" for t in node.targets) and isinstance(node.value, (ast.Dict, ast.Set, ast.List, ast.Tuple)):
-            keys = node.value.keys if isinstance(node.value, ast.Dict) else node.value.elts
-            for k in keys:
-                if isinstance(k, ast.Constant) and isinstance(k.value, str) and k.value not in names:
-                    names.append(k.value)
-    return names
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                if is_sw(t):
+                    found += [(node.lineno, i, n, v) for i, (n, v) in enumerate(lit(node.value))]
+                elif isinstance(t, ast.Subscript) and is_sw(t.value) and isinstance(t.slice, ast.Constant) and isinstance(t.slice.value, str):
+                    found.append((node.lineno, 0, t.slice.value, node.value))
+        elif isinstance(node, ast.AugAssign) and is_sw(node.target):
+            found += [(node.lineno, i, n, v) for i, (n, v) in enumerate(lit(node.value))]
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "update" and is_sw(node.func.value):
+            found += [(node.lineno, i, n, v) for a in node.args for i, (n, v) in enumerate(lit(a))]
+    out, seen = [], set()
+    for _, _, n, v in sorted(found, key=lambda x: (x[0], x[1])):
+        if n not in seen:
+            seen.add(n)
+            out.append((n, v))
+    return out
+
+
+def model_switches(model):
+    """The names in every dictionary SWITCHES of the model file, in the order of the file (read from the source, the model is not run)."""
+    e = switch_entries(model)
+    return None if e is None else [n for n, _ in e]
 
 
 def _where(text, old):

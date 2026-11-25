@@ -1,0 +1,24 @@
+---
+name: check-ports-against-timed-spec
+description: Find the faults of ONE module of a hardware design that show at its ports, when a timed specification model of that module exists (a model whose step() is one clock edge). The design's Python translation and the timed model are run on the same port stimulus with the library portfacts, which compares every output after every edge; each output that differs is traced to the statement that gives it its value and repaired with a switch that is judged by running portfacts again. Used after the pieces of the module were checked alone against the specification.
+---
+Principle. Reading gives a hypothesis; running gives a fact. The measuring is done by the library, the same way every time: you do not write a checker. What is left for you is to describe the unit once, to read the print, to find the statement behind each difference, and to prove it with a switch.
+
+The two models. The design model is `RtlModel` (the RTL as written, with switches). The timed specification model was written from the specification only; it says what every output port is after every clock edge. It is the requirement for the ports. Where it gives no value for an output in an edge, the specification does not fix that value: portfacts prints "-" and does not judge it, and the design is not changed for it.
+
+1. The description. Write /code/work/handshake.json as the text at the top of /code/lib/portfacts.py says: the input that marks an operation, every way an operation can be given, two sets of data, a tail longer than the longest operation, and (optional) registers of the unit to print beside the ports. Take the names from the model and the reports of the earlier orders; do not guess a name: run it and read the print. The timed model is given by the host (spec/given.json); it is not replaced and not wrapped.
+
+2. The first print. Run portfacts with the switches kept so far. An output marked DIFFERENT, with the case, the edge and the two values, is a difference; nothing else is. `--case NAME --edges` prints that case edge by edge: the inputs, the outputs of the design and of the specification, and which outputs differ in each edge.
+
+3. One difference at a time: the first edge at which the output differs, in the first case that shows it.
+   - Read the edges around it in the per-edge print: is the value of the design a value the specification has in another edge (it comes earlier or later: a count, a delay, a condition of a register on the way), or a value the specification never has (the value itself is computed wrongly, or a part of it is taken from the wrong place)?
+   - Find the statements that give this output its value in that edge: the register the port shows, what that register takes, and the registers on the way from the inputs. `sigdump` prints every register of the model after every edge; the register in which the two first disagree is where to look. Each place that could repair the difference is a candidate: write it as a switch that changes this one place, in the source's form, with a name in `fix`. With no switch on, RtlModel still does what the RTL as written does.
+   - Run portfacts with the kept switches and one candidate (`--fix all,candidate`). A candidate is not accepted and not rejected by thought: a sentence such as "then the result would come too late" is a hypothesis until portfacts has run with this candidate.
+   - Keep the candidate with which this output becomes "same" in this case and no output that was "same" becomes DIFFERENT, in every case. Remove the other candidates from the model. If no single place does this, two places may be one switch: name both, test them together, say so.
+   - When two candidates give the same print, take the one that changes less of the source and say that the other exists. From less to more: a constant or a condition of an existing statement; a signal that exists and was not used; a new signal; a new register.
+   - A difference whose cause is inside a piece that an earlier order checked (a value computed wrongly) is repaired in that piece, and the earlier check of the piece is run again with the switch.
+   - A kept switch is not opened again unless portfacts shows a difference because of it.
+
+4. What is not repaired. An output that the specification model does not fix ("-") has no requirement. A difference that is the same in every case and every operation by a fixed number of edges, where the sentence of the specification that gives this number can be read in two ways, is reported with both readings; the design is not changed on that ground alone.
+
+5. Finished when portfacts, with all kept switches, prints every output of every case as "same in every judged edge". The report: the description file, the first print's differences, each switch with its source file, line and change, the portfacts lines before and after it, the candidates that were removed, and the last print's summary.

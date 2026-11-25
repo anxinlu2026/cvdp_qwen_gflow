@@ -85,33 +85,27 @@ def load(book):
 
 
 def model_switches(model):
-    try:
-        tree = ast.parse(Path(model).read_text())
-    except Exception:
-        return None
-    names = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "SWITCHES" for t in node.targets) and isinstance(node.value, (ast.Dict, ast.Set, ast.List, ast.Tuple)):
-            for k in (node.value.keys if isinstance(node.value, ast.Dict) else node.value.elts):
-                if isinstance(k, ast.Constant) and isinstance(k.value, str) and k.value not in names:
-                    names.append(k.value)
-    return names
+    import rtlapply
+    return rtlapply.model_switches(model)
 
 
 def model_places(model):
     """Switches of the model whose value in SWITCHES starts with a file name and a text of lines: {name: (file, [lines])}."""
-    try:
-        tree = ast.parse(Path(model).read_text())
-    except Exception:
-        return {}
+    import rtlapply
     out = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "SWITCHES" for t in node.targets) and isinstance(node.value, ast.Dict):
-            for k, v in zip(node.value.keys, node.value.values):
-                if isinstance(k, ast.Constant) and isinstance(v, (ast.Tuple, ast.List)) and len(v.elts) >= 2 and all(isinstance(x, ast.Constant) for x in v.elts[:2]):
-                    nums = parse_lines(str(v.elts[1].value).replace("lines", "").replace("line", ""))
-                    if isinstance(v.elts[0].value, str) and nums:
-                        out[k.value] = (v.elts[0].value, nums)
+    import re
+    for k, v in rtlapply.switch_entries(model) or []:
+        if isinstance(v, (ast.Tuple, ast.List)) and len(v.elts) >= 2 and all(isinstance(x, ast.Constant) for x in v.elts[:2]):
+            nums = parse_lines(str(v.elts[1].value).replace("lines", "").replace("line", ""))
+            if isinstance(v.elts[0].value, str) and nums:
+                # the text of the switch may name more lines ("lines 159-162 and 171-174"): they are taken too
+                for x in v.elts[2:]:
+                    if isinstance(x, ast.Constant) and isinstance(x.value, str):
+                        for m in re.finditer(r"\blines?\s+(\d+)(?:\s*-\s*(\d+))?((?:\s*(?:,|and)\s*\d+(?:\s*-\s*\d+)?)*)", x.value):
+                            for part in re.findall(r"\d+\s*-\s*\d+", m.group(0)):    # ranges only: a single "line N" may be a line of a document
+                                a, _, b = part.replace(" ", "").partition("-")
+                                nums += list(range(int(a), int(b) + 1)) if 0 <= int(b) - int(a) < 200 else []
+                out[k] = (v.elts[0].value, sorted(set(nums)))
     return out
 
 

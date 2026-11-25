@@ -1,0 +1,83 @@
+{
+ "pid": "cvdp_agentic_AES_encryption_decryption_0005",
+ "note": "architecture (blind, task text and FIPS 197): start/done; timed specification provided (schedule and interface); the model is written by Qwen (order T); flow f7 (2026-11-22): UD right after B (data_path), the host gate blockfacts after it",
+ "spec_dir": "spec_aes0005",
+ "timed_model": "order",
+ "t_step": "T",
+ "data_path": [
+  [
+   "UD",
+   "ud",
+   {
+    "scope": "the module aes128_decrypt, which has the module aes128_key_expansion inside it (the pieces of aes128_decrypt were checked in block_check_2.md, those of aes128_key_expansion in block_check_1.md)",
+    "report": "unit_check_2.md",
+    "notes": "notes_ud_2.md"
+   }
+  ]
+ ],
+ "lower_units": [
+  [
+   "E",
+   "e1",
+   {
+    "scope": "the module aes128_key_expansion (its pieces were checked in block_check_1.md)",
+    "report": "edge_check_1.md",
+    "script": "edge_table_1.py",
+    "notes": "notes_e_1.md"
+   }
+  ],
+  [
+   "UA1",
+   "u1a",
+   {
+    "scope": "the module aes128_key_expansion (its pieces were checked in block_check_1.md; its one-edge report is edge_check_1.md with the script edge_table_1.py)",
+    "report": "unit_check_1.md",
+    "script": "walk_check_1.py",
+    "notes": "notes_ua1_1.md"
+   }
+  ],
+  [
+   "UA2",
+   "u1b",
+   {
+    "scope": "the module aes128_key_expansion (its pieces were checked in block_check_1.md; its one-edge report is edge_check_1.md with the script edge_table_1.py)",
+    "report": "unit_check_1.md",
+    "script": "walk_check_1.py",
+    "notes": "notes_ua2_1.md"
+   }
+  ],
+  [
+   "UB",
+   "u1c",
+   {
+    "scope": "the module aes128_key_expansion (its pieces were checked in block_check_1.md; its one-edge report is edge_check_1.md with the script edge_table_1.py)",
+    "report": "unit_check_1.md",
+    "script": "edge_table_1.py",
+    "notes": "notes_ub_1.md"
+   }
+  ]
+ ],
+ "top": [
+  [
+   "UC",
+   "uc",
+   {
+    "scope": "the module aes128_decrypt, which has the module aes128_key_expansion inside it (the pieces of aes128_decrypt were checked in block_check_2.md; aes128_key_expansion has edge_check_1.md and unit_check_1.md)",
+    "report": "unit_check_2.md",
+    "notes": "notes_uc_2.md"
+   }
+  ]
+ ],
+ "b_parts": {
+  "2": [
+   [
+    "p1",
+    "the pieces of the module aes128_decrypt that compute along the rows or the columns of its data: the xtimes signals, MixColumns and ShiftRows, piece by piece (its submodule aes128_key_expansion was checked in block_check_1.md; the other pieces of aes128_decrypt are checked by the next order, which takes the arrangement you write in notes.md)"
+   ],
+   [
+    "p2",
+    "the other pieces of the module aes128_decrypt with the modules it instantiates that instantiate nothing (inv_sbox): the load of i_data, the output o_data, AddRoundKey and SubBytes, piece by piece (its submodule aes128_key_expansion was checked in block_check_1.md; xtimes, MixColumns and ShiftRows were checked by the order before this one: its arrangement of the data is in notes.md and its table in block_check_2.md; add the rows of your pieces to that table)"
+   ]
+  ]
+ }
+}

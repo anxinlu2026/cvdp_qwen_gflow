@@ -8,7 +8,7 @@ Files from earlier orders: /code/work/rtl_model.py (a class `RtlModel(fix=())`, 
 
 In this order you can read files, write files in /code/work, and run commands with the shell and python3. There is no network and no Verilog simulator. The skill sv-semantics describes how SystemVerilog evaluates; read it first.
 
-Task: the switches of RtlModel that earlier orders kept have no RTL change in the book of the switches yet. Enter each of them in the book with its RTL change, with /code/lib/ledger.py (read the text at its top first, and the text at the top of /code/lib/rtlapply.py for the form of the edits). The RTL itself is not edited by hand: the library writes /code/work/rtl_changes.json and /code/work/rtl_fixed/ from the entries.
+Task: some switches of RtlModel that earlier orders kept have no RTL change in the book of the switches yet. Enter each of them in the book with its RTL change, with /code/lib/ledger.py (read the text at its top first, and the text at the top of /code/lib/rtlapply.py for the form of the edits). The RTL itself is not edited by hand: the library writes /code/work/rtl_changes.json and /code/work/rtl_fixed/ from the entries.
 
 1. `python3 /code/lib/ledger.py apply` names the switches of the model without an entry. Take them in this order: the switches of the modules below first, then in the order in which they are written in the model (a switch that a later one builds on is before it).
 2. One switch at a time. Read the switch in the model (what it does when it is on) and the lines of the RTL it names; write its edits in a JSON file; run
